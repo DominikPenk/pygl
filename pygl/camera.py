@@ -15,6 +15,14 @@ def perspective(fov, aspect, near, far):
         [0, 0, -1, 0]
     ], dtype=np.float32)
 
+def orthographic(left, right, bottom, top, near, far):
+    return np.array([
+        [2/(right - left), 0, 0, -(right + left)/(right - left)],
+        [0, 2/(top - bottom), 0, -(top + bottom)/(top - bottom)],
+        [0, 0, -2/(far - near), -(far + near)/(far - near)],
+        [0, 0, 0, 1]
+    ], dtype=np.float32)
+
 class Camera(object):
 
     def __init__(self, screen_size, near=0.05, far=300.0, fov=50.0):

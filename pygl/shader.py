@@ -263,10 +263,10 @@ class Shader(GLObject):
                 log.error(msg)
                 raise e
 
-def get_bling_phong_shader(lighting_mode='direct'):
+def get_bling_phong_shader(lighting_mode='spherical_harmonics'):
     """Return a Phong shader with Bling lighting model
     """
-    assert lighting_mode in ['direct', 'spherical_harmonics']
+    assert lighting_mode in ['spherical_harmonics']
     from pygl.shaders.phong_shader import phong_vs, phong_fs
     # TODO: Different lighting models
     return Shader(vertex=phong_vs, fragment=phong_fs)
@@ -356,6 +356,19 @@ def get_flat_nocs_shader():
     void main() { FragColor = vec4(coord, 1.0); }
     """
     return Shader(vertex=vertex_shader, fragment=fragment_shader)
+
+def get_shadow_map_shader():
+    shadow_map_vs = """#version 330 core
+    layout (location = 0) in vec3 pos;
+    uniform mat4 mvp;
+    void main() {
+        gl_Position = mvp * vec4(pos, 1.0);
+    }
+    """
+    shadow_map_fs = """#version 330 core
+    void main() {}"""
+
+    return Shader(vertex=shadow_map_vs, fragment=shadow_map_fs)
 
 __all__ = [
     'Shader',

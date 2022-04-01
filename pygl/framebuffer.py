@@ -23,7 +23,6 @@ class FrameBuffer(GLObject):
         if self.__rbo != 0:
             gl.glDeleteRenderbuffers(1, np.array(self.__rbo))
         
-
     def attach_texture(self, slot, texture = None, mip_level=0, **kwargs):
         if not (gl.GL_COLOR_ATTACHMENT0 <= slot <= gl.GL_COLOR_ATTACHMENT0 + gl.GL_MAX_COLOR_ATTACHMENTS):
             slot = gl.GL_COLOR_ATTACHMENT0 + slot
@@ -87,27 +86,23 @@ class FrameBuffer(GLObject):
                 gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, 0)            
 
     def bind(self):
-        gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.id)
-        if not self.has_depth_texture and self.__rbo == 0:
-            self.__rbo = gl.glGenRenderbuffers(1)
-            gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.__rbo)
-            gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_DEPTH_COMPONENT24, self.width, self.height)
-            gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT, gl.GL_RENDERBUFFER, self.__rbo)
-        gl.glDrawBuffers(len(self.__color_buffers), self.__color_buffers)
+        should_be_bound = Context.current().try_push_fbo(self)
+        if should_be_bound:
+            gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.id)
+
+            if not self.has_depth_texture and self.__rbo == 0:
+                self.__rbo = gl.glGenRenderbuffers(1)
+                gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.__rbo)
+                gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_DEPTH_COMPONENT24, self.width, self.height)
+                gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT, gl.GL_RENDERBUFFER, self.__rbo)
+            if self.__color_buffers:
+                gl.glDrawBuffers(len(self.__color_buffers), self.__color_buffers)
+
         gl.glViewport(0, 0, self.size[1], self.size[0])
-        Context.current().fbo_stack.append(self)
 
     def unbind(self):
         ctx = Context.current()
-        assert ctx.fbo_stack[-1] == self, "FBO stack corrupted"
-        ctx.fbo_stack = ctx.fbo_stack[:-1]
-
-        # Restore previous fbo
-        if len(ctx.fbo_stack) > 0:
-            gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, ctx.fbo_stack[-1].id)
-            gl.glViewport(0, 0, ctx.fbo_stack[-1].width, ctx.fbo_stack[-1].height)
-        else:
-            gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
+        ctx.pop_fbo(self)
         
     def clear_color_attachment(self, slot, color):
         gl.glClearBufferfv(gl.GL_COLOR, slot, np.array(color).astype(np.float32))

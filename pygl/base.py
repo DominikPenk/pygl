@@ -65,6 +65,32 @@ class Context(abc.ABC):
     def _make_current(self):
         pass
 
+    def try_push_fbo(self, fbo)->bool:
+        """Try to push a new fbo onto the stack.
+        If it is already on top. Nothing will be pushed.
+        
+        Returns if the fbo was pushed onto the stack."""
+        if len(self.fbo_stack) == 0 or self.fbo_stack[-1].id != fbo.id:
+            self.fbo_stack.append(weakref.proxy(fbo))
+            return True
+        return False
+
+    def pop_fbo(self, fbo)->None:
+        """Pops fbo from the stack. If fbo and the top of bof stack differ, this 
+        raises an exception"""
+        if len(self.fbo_stack) == 0 or self.fbo_stack[-1].id != fbo.id:
+            # TODO: Implement custom exception
+            raise RuntimeError("Fbo stack was corrupted")
+        
+        self.fbo_stack.pop()
+
+        if len(self.fbo_stack) > 0:
+            new_fbo = self.fbo_stack[-1]
+            gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, new_fbo.id)
+            gl.glViewport(0, 0, new_fbo.width, new_fbo.height)
+        else:
+            gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, 0)
+
     def set_active(self):
         if len(Context.context_stack) == 0 or Context.context_stack[-1] != self:
             self._make_current()

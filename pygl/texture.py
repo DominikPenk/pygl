@@ -63,7 +63,7 @@ class tformat(IntEnum):
 
 class ttype(IntEnum):
     float32 = GL_FLOAT
-    float16 = GL_FLOAT
+    float16 = GL_HALF_FLOAT
     uint8 = GL_UNSIGNED_BYTE,
     uint24_8 = GL_UNSIGNED_INT_24_8
 
@@ -124,6 +124,7 @@ def get_sized_format(fmt, tp):
             tformat.rg: GL_RG16F,
             tformat.rgba: GL_RGBA16F,
             tformat.bgra: GL_RGBA16F,
+            tformat.depth: GL_DEPTH_COMPONENT16
         },
         ttype.uint8: {
             tformat.red: GL_R8,

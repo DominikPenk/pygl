@@ -15,21 +15,22 @@ except ImportError as err:
     from pygl.glfw_context import GLFWContext
     _has_egl_context = False
 
-def get_offscreen_context(size, force_glfw=False):
+def get_offscreen_context(size=(1, 1), force_glfw=False):
     """Create a context for offscreen rendering.
 
     Args:
         size (tuple): (height, width)
     """
     if _has_egl_context and not force_glfw:
-        return EGLContext(size)
+        ctx = EGLContext(size)
     else:
         if not force_glfw:
             logging.warn(
                 "EGL was not found. Going to use an invisible GLFW window "
                 "for offscreen rendering. This does not work if you do "
                 "not have an x-server.")
-        return GLFWContext(size, visible=False)
+        ctx = GLFWContext(size, visible=False)
+    ctx.set_active()
 
 def assure_context(fn):
     """Ensures that a default context is enabled.
