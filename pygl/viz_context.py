@@ -1,4 +1,4 @@
-from OpenGL.GL import *
+import OpenGL.GL as gl
 import numpy as np
 import pygl
 from pygl.framebuffer import FrameBuffer
@@ -14,7 +14,7 @@ class VisualizationContext(object):
 
         fbo_dtype = kwargs.pop("fbo_dtype", np.uint8)
         self.fbo = FrameBuffer(self.size)
-        self.tex = self.fbo.attach_texture(GL_COLOR_ATTACHMENT0,
+        self.tex = self.fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0,
                                            dtype=fbo_dtype)
 
         self.depth_test  = kwargs.get('depth_test', True)
@@ -35,15 +35,15 @@ class VisualizationContext(object):
         self._ctx.set_active()
         self.fbo.bind()
         if self.depth_test:
-            glEnable(GL_DEPTH_TEST)
+            gl.glEnable(gl.GL_DEPTH_TEST)
         else:
-            glDisable(GL_DEPTH_TEST)
+            gl.glDisable(gl.GL_DEPTH_TEST)
         if self.culling:
-            glEnable(GL_CULL_FACE)
-            glCullFace(GL_BACK)
+            gl.glEnable(gl.GL_CULL_FACE)
+            gl.glCullFace(gl.GL_BACK)
         # print("Clear color", self.clear_color)
-        glClearColor(*self.clear_color)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        gl.glClearColor(*self.clear_color)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
     def end(self, download=True):
         if download:

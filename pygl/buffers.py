@@ -1,5 +1,5 @@
 import numpy as np
-from OpenGL.GL import *
+import OpenGL.GL as gl
 
 import ctypes
 from .base import GLObject, Context
@@ -7,7 +7,7 @@ from .base import GLObject, Context
 class BufferObject(GLObject):
 
     def __init__(self, data, target):
-        super(BufferObject, self).__init__(glGenBuffers, glDeleteBuffers)
+        super(BufferObject, self).__init__(gl.glGenBuffers, gl.glDeleteBuffers)
         self.__target = target
         self._size = 0
         if data is not None:
@@ -15,29 +15,29 @@ class BufferObject(GLObject):
             self.update(data)
 
     def __enter__(self):
-        glBindBuffer(self.__target, self.id)
+        gl.glBindBuffer(self.__target, self.id)
 
     def __exit__(self, type, value, traceback):
-        glBindBuffer(self.__target, 0)
+        gl.glBindBuffer(self.__target, 0)
 
     def bind(self, index=-1):
-        glBindBuffer(self.__target, self.id)
+        gl.glBindBuffer(self.__target, self.id)
         if index >= 0:
-            glBindBufferBase(self.__target, index, self.id)
+            gl.glBindBufferBase(self.__target, index, self.id)
 
     def unbind(self):
-        glBindBuffer(self.__target, 0)
+        gl.glBindBuffer(self.__target, 0)
 
     def update(self, data, offset=0, nbytes=None):
         nbytes = data.nbytes if nbytes is None else nbytes
         self.bind()
         self._size = data.size
-        glBufferSubData(self.__target, offset, data.nbytes, data)
+        gl.glBufferSubData(self.__target, offset, data.nbytes, data)
         self.unbind()
 
     def resize(self, nbytes):
         self.bind()
-        glBufferData(self.__target, nbytes, None, GL_STATIC_DRAW) 
+        gl.glBufferData(self.__target, nbytes, None, gl.GL_STATIC_DRAW) 
         self.unbind()
 
     @property
@@ -49,34 +49,34 @@ class BufferObject(GLObject):
         return self.__target
     
 def create_vbo(data=None):
-    return BufferObject(data, GL_ARRAY_BUFFER)
+    return BufferObject(data, gl.GL_ARRAY_BUFFER)
 
 def create_index_buffer(data=None):
-    return BufferObject(data, GL_ELEMENT_ARRAY_BUFFER)
+    return BufferObject(data, gl.GL_ELEMENT_ARRAY_BUFFER)
 
 def create_ssbo(data=None):
-    return BufferObject(data, GL_SHADER_STORAGE_BUFFER)
+    return BufferObject(data, gl.GL_SHADER_STORAGE_BUFFER)
 
 class VertexArrayObject(GLObject):
     def __init__(self):
-        super(VertexArrayObject, self).__init__(glGenVertexArrays, glDeleteVertexArrays)
+        super(VertexArrayObject, self).__init__(gl.glGenVertexArrays, gl.glDeleteVertexArrays)
 
     def __enter__(self):
-        glBindVertexArray(self.id)
+        gl.glBindVertexArray(self.id)
         return self
 
     def __exit__(self, type, value, traceback):
-        glBindVertexArray(0)
+        gl.glBindVertexArray(0)
 
     def bind(self):
-        glBindVertexArray(self.id)
+        gl.glBindVertexArray(self.id)
 
     def unbind(Self):
-        glBindVertexArray(0)
+        gl.glBindVertexArray(0)
 
     def setIndexBuffer(self, ebo):
         if isinstance(ebo, BufferObject):
-            assert ebo.target == GL_ELEMENT_ARRAY_BUFFER
+            assert ebo.target == gl.GL_ELEMENT_ARRAY_BUFFER
             self.bind()
             ebo.bind()
             self.unbind()
@@ -91,10 +91,10 @@ class VertexArrayObject(GLObject):
         self.bind()
         vbo.bind()
         for (idx, dim, attr_type, normalized, rel_offset) in attribs:
-            glEnableVertexAttribArray(idx)
-            vertexAttrib = glVertexAttribIPointer if attr_type in [GL_INT, GL_UNSIGNED_INT] else glVertexAttribPointer
+            gl.glEnableVertexAttribArray(idx)
+            vertexAttrib = gl.glVertexAttribIPointer if attr_type in [gl.GL_INT, gl.GL_UNSIGNED_INT] else gl.glVertexAttribPointer
             vertexAttrib(idx, dim, attr_type, normalized, stride, ctypes.c_void_p(rel_offset))
-            glEnableVertexAttribArray(idx)
+            gl.glEnableVertexAttribArray(idx)
         self.unbind()
         vbo.unbind()
 
@@ -102,11 +102,11 @@ class VertexArrayObject(GLObject):
     def bind_dummy(cls):
         ctx = Context.current()
         assert ctx is not None, "No current context"
-        glBindVertexArray(ctx.dummy_vao)
+        gl.glBindVertexArray(ctx.dummy_vao)
 
 class ShaderStorageBuffer(BufferObject):
     def __init__(self, data=None):
-        super(ShaderStorageBuffer, self).__init__(data, GL_SHADER_STORAGE_BUFFER)
+        super(ShaderStorageBuffer, self).__init__(data, gl.GL_SHADER_STORAGE_BUFFER)
 
     def update(self, data, offset=0, nbytes=None):
         self._dtype = data.dtype
@@ -115,10 +115,10 @@ class ShaderStorageBuffer(BufferObject):
     def download(self):
         import ctypes
         self.bind()
-        ptr = glMapBuffer(self.target, GL_READ_ONLY)
+        ptr = gl.glMapBuffer(self.target, gl.GL_READ_ONLY)
         # Copy data into numpy array
         data = np.empty(1, self._dtype)
         ctypes.memmove(data.ctypes.data, ptr, data.nbytes)
-        glUnmapBuffer(self.target)
+        gl.glUnmapBuffer(self.target)
         self.unbind()
         return data

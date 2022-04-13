@@ -1,17 +1,11 @@
 import logging as log
 import numpy as np
-from OpenGL.GL import *
+import OpenGL.GL as gl
 import os
 import time
 
 from .base import GLObject
 from .texture import Texture2D, TextureBase
-
-import logging as log
-import numpy as np
-from OpenGL.GL import *
-import os
-import time
 
 from pygl.base import GLObject, context_cached
 from pygl.texture import TextureBase
@@ -19,21 +13,21 @@ from pygl.buffers import ShaderStorageBuffer
 
 SHADER_TYPE_MAP = {
     # Short names
-    'vs': GL_VERTEX_SHADER,
-    'tcs': GL_TESS_CONTROL_SHADER,
-    'tes': GL_TESS_EVALUATION_SHADER,
-    'gs': GL_GEOMETRY_SHADER,
-    'fs': GL_FRAGMENT_SHADER,
-    'cs': GL_COMPUTE_SHADER,
-    'compute': GL_COMPUTE_SHADER,
+    'vs': gl.GL_VERTEX_SHADER,
+    'tcs': gl.GL_TESS_CONTROL_SHADER,
+    'tes': gl.GL_TESS_EVALUATION_SHADER,
+    'gs': gl.GL_GEOMETRY_SHADER,
+    'fs': gl.GL_FRAGMENT_SHADER,
+    'cs': gl.GL_COMPUTE_SHADER,
+    'compute': gl.GL_COMPUTE_SHADER,
 
     # Long names
-    'vertex': GL_VERTEX_SHADER,
-    'tess_control': GL_TESS_CONTROL_SHADER,
-    'tess_eval': GL_TESS_EVALUATION_SHADER,
-    'geometry': GL_GEOMETRY_SHADER,
-    'fragment': GL_FRAGMENT_SHADER,
-    'compute': GL_COMPUTE_SHADER  
+    'vertex': gl.GL_VERTEX_SHADER,
+    'tess_control': gl.GL_TESS_CONTROL_SHADER,
+    'tess_eval': gl.GL_TESS_EVALUATION_SHADER,
+    'geometry': gl.GL_GEOMETRY_SHADER,
+    'fragment': gl.GL_FRAGMENT_SHADER,
+    'compute': gl.GL_COMPUTE_SHADER  
 }
 
 def type_from_path(path):
@@ -61,7 +55,7 @@ class Shader(GLObject):
     def free(self):
         log.debug("Shader.free")
         if self.id != 0:
-            glDeleteProgram(self.id)
+            gl.glDeleteProgram(self.id)
             self._id = 0
 
     def _compile(self):
@@ -73,26 +67,26 @@ class Shader(GLObject):
             shader_ids.append(Shader.__create_shader__(path_or_src, shader_type))
 
         if self.id != 0:
-            glDeleteProgram(self.id)
-        self._id = glCreateProgram()
+            gl.glDeleteProgram(self.id)
+        self._id = gl.glCreateProgram()
         for shader_id in shader_ids:
-            glAttachShader(self.id, shader_id)
+            gl.glAttachShader(self.id, shader_id)
 
-        glLinkProgram(self.id)
-        if not glGetProgramiv(self.id, GL_LINK_STATUS):
-            log.error(glGetProgramInfoLog(self.id))
+        gl.glLinkProgram(self.id)
+        if not gl.glGetProgramiv(self.id, gl.GL_LINK_STATUS):
+            log.error(gl.glGetProgramInfoLog(self.id))
             raise RuntimeError('Shader linking failed')
         else:
             log.debug('Shader linked.')
 
         for shader_id in shader_ids:
-            glDeleteShader(shader_id)
+            gl.glDeleteShader(shader_id)
 
         self.__shaders = [(s, t, now) for (s, t, _) in self.__shaders]
 
         # Store uniform types
-        n = glGetProgramiv(self.id, GL_ACTIVE_UNIFORMS, None)
-        self._uniform_types = { k.decode(): v for k, _, v in  [glGetActiveUniform(self.id, i) for i in range(n)]}
+        n = gl.glGetProgramiv(self.id, gl.GL_ACTIVE_UNIFORMS, None)
+        self._uniform_types = { k.decode(): v for k, _, v in  [gl.glGetActiveUniform(self.id, i) for i in range(n)]}
 
     @staticmethod
     def __read_file__(path):
@@ -107,13 +101,13 @@ class Shader(GLObject):
             shader_code = Shader.__read_file__(path_or_src)
         else:
             shader_code = path_or_src
-        shader = glCreateShader(shader_type)
-        glShaderSource(shader, shader_code)
-        glCompileShader(shader)
-        if not glGetShaderiv(shader, GL_COMPILE_STATUS):
+        shader = gl.glCreateShader(shader_type)
+        gl.glShaderSource(shader, shader_code)
+        gl.glCompileShader(shader)
+        if not gl.glGetShaderiv(shader, gl.GL_COMPILE_STATUS):
             msg = f"[{path_or_src}]: Shader failed to compile!" if from_file else "Static shader failed to compile!"
             log.error(msg)
-            log.error(f"{glGetShaderInfoLog(shader).decode()}")
+            log.error(f"{gl.glGetShaderInfoLog(shader).decode()}")
             raise RuntimeError(msg)
         elif from_file:
             log.debug(f"[{path_or_src}]: Shader compiled!")
@@ -131,7 +125,7 @@ class Shader(GLObject):
 
     @property
     def is_compute(self):
-        return self.__shaders[0][1] == GL_COMPUTE_SHADER
+        return self.__shaders[0][1] == gl.GL_COMPUTE_SHADER
 
     @property
     def workgroup_size(self):
@@ -150,14 +144,14 @@ class Shader(GLObject):
     def use(self, **kwargs):
         if not self.up_to_date:
             self._compile()
-        glUseProgram(self.id)
+        gl.glUseProgram(self.id)
         self.set_uniforms(**kwargs)
 
     def dispatch(self, x, y=1, z=1, **kwargs):
         assert self.is_compute, "Shader is not a compute shader"
         self.use(**kwargs)
-        glDispatchCompute(x, y, z)
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT)
+        gl.glDispatchCompute(x, y, z)
+        gl.glMemoryBarrier(gl.GL_SHADER_STORAGE_BARRIER_BIT)
 
     def dispatch_on_array(self, array, **kwargs):
         assert self.is_compute, "Shader is not a compute shader"
@@ -173,49 +167,49 @@ class Shader(GLObject):
 
 
     def set_float(self, name, value):
-        glUniform1f(glGetUniformLocation(self.id, name), value)
+        gl.glUniform1f(gl.glGetUniformLocation(self.id, name), value)
 
     def set_int(self, name, value):
-        glUniform1i(glGetUniformLocation(self.id, name), value)
+        gl.glUniform1i(gl.glGetUniformLocation(self.id, name), value)
 
     def set_vector(self, name, vector):
         if vector.ndim == 1:        
             if vector.size == 1:
-                glUniform1f(glGetUniformLocation(self.id, name), *vector)
+                gl.glUniform1f(gl.glGetUniformLocation(self.id, name), *vector)
             elif vector.size == 2:
-                glUniform2f(glGetUniformLocation(self.id, name), *vector)
+                gl.glUniform2f(gl.glGetUniformLocation(self.id, name), *vector)
             elif vector.size == 3:
-                glUniform3f(glGetUniformLocation(self.id, name), *vector)
+                gl.glUniform3f(gl.glGetUniformLocation(self.id, name), *vector)
             elif vector.size == 4:
-                glUniform4f(glGetUniformLocation(self.id, name), *vector)
+                gl.glUniform4f(gl.glGetUniformLocation(self.id, name), *vector)
             else:
                 raise RuntimeError("Invalid value")
         elif vector.ndim == 2:
             n = len(vector)
             dim = vector.shape[-1]
             if dim == 1:
-                glUniform1fv(glGetUniformLocation(self.id, name), n, vector)
+                gl.glUniform1fv(gl.glGetUniformLocation(self.id, name), n, vector)
             elif dim == 2:
-                glUniform2fv(glGetUniformLocation(self.id, name), n, vector)
+                gl.glUniform2fv(gl.glGetUniformLocation(self.id, name), n, vector)
             elif dim == 3:
-                glUniform3fv(glGetUniformLocation(self.id, name), n, vector)
+                gl.glUniform3fv(gl.glGetUniformLocation(self.id, name), n, vector)
             elif dim == 4:
-                glUniform4fv(glGetUniformLocation(self.id, name), n, vector)
+                gl.glUniform4fv(gl.glGetUniformLocation(self.id, name), n, vector)
             else:
                 raise RuntimeError("Invalid value")
 
     def set_matrix(self, name, value):
         assert isinstance(value, np.ndarray), 'Matrix must be a numpy array'
         if value.shape == (4, 4):
-            glUniformMatrix4fv(glGetUniformLocation(self.id, name), 1, GL_TRUE, value)
+            gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
         elif value.shape == (3, 3):
-            glUniformMatrix3fv(glGetUniformLocation(self.id, name), 1, GL_TRUE, value)
+            gl.glUniformMatrix3fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
         else:
             raise RuntimeError(f"Matrix shape {value.shape} not supported")
 
     def set_sampler(self, name, texture, slot):
         texture.bind(slot)
-        glUniform1i(glGetUniformLocation(self.id, name), slot)
+        gl.glUniform1i(gl.glGetUniformLocation(self.id, name), slot)
 
     def set_uniforms(self, **kwargs):
         """Set multiple uniforms for shader
@@ -229,35 +223,35 @@ class Shader(GLObject):
 
             try:
                 if isinstance(value, float):
-                    glUniform1f(glGetUniformLocation(self.id, name), value)
+                    gl.glUniform1f(gl.glGetUniformLocation(self.id, name), value)
                 elif isinstance(value, (int, bool)):
-                    glUniform1i(glGetUniformLocation(self.id, name), value)
+                    gl.glUniform1i(gl.glGetUniformLocation(self.id, name), value)
                 elif isinstance(value, np.ndarray):
                     if value.dtype != np.float32:
                         print(f"Set uniform {name}: Unsupported format {value.dtype}. Going to convert")
                         value = value.astype(np.float32)
                     if value.shape == (2, 2):
-                        glUniformMatrix2fv(glGetUniformLocation(self.id, name), 1, GL_TRUE, value)
+                        gl.glUniformMatrix2fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
                     elif value.shape == (3, 3):
-                        glUniformMatrix3fv(glGetUniformLocation(self.id, name), 1, GL_TRUE, value)
+                        gl.glUniformMatrix3fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
                     elif value.shape == (4, 4):
-                        glUniformMatrix4fv(glGetUniformLocation(self.id, name), 1, GL_TRUE, value)
+                        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
                     else:
                         self.set_vector(name, value)
                 elif isinstance(value, TextureBase):
                     uniform_type = self._uniform_types.get(name, None)
-                    if uniform_type in [GL_SAMPLER_2D, GL_SAMPLER_CUBE, None]:
+                    if uniform_type in [gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE, None]:
                         value.bind(next_texture_slot)
-                        glUniform1i(glGetUniformLocation(self.id, name), next_texture_slot)
+                        gl.glUniform1i(gl.glGetUniformLocation(self.id, name), next_texture_slot)
                     else:
-                        glBindImageTexture(next_texture_slot, value.id, 0, False, 0, GL_WRITE_ONLY, value.sized_format)
+                        gl.glBindImageTexture(next_texture_slot, value.id, 0, False, 0, gl.GL_WRITE_ONLY, value.sized_format)
                     next_texture_slot += 1  
                 elif isinstance(value, ShaderStorageBuffer):
-                    block_index = glGetProgramResourceIndex(self.id, GL_SHADER_STORAGE_BLOCK, name)
+                    block_index = gl.glGetProgramResourceIndex(self.id, gl.GL_SHADER_STORAGE_BLOCK, name)
                     value.bind(next_free_ssbo_slot)
-                    glShaderStorageBlockBinding(self.id, block_index, next_free_ssbo_slot)
+                    gl.glShaderStorageBlockBinding(self.id, block_index, next_free_ssbo_slot)
                     next_free_ssbo_slot += 1
-            except GLError as e:
+            except gl.GLError as e:
                 msg = f"Failed to set uniform {name}\n{e.description.decode()}"
                 print(msg)
                 log.error(msg)

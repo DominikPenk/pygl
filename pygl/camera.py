@@ -1,5 +1,4 @@
 import numpy as np
-from OpenGL.GL import *
 import math
 
 from . import transform

@@ -1,4 +1,5 @@
 import abc
+import ctypes
 import logging
 import os
 from enum import Enum, IntEnum
@@ -6,18 +7,18 @@ from typing import Union
 
 import imageio
 import numpy as np
-from OpenGL.GL import *
+import OpenGL.GL as gl
 
 from pygl.base import GLObject, context_cached
 from pygl.enable import enables
 
 
 class twrap(IntEnum):
-    clamp = GL_CLAMP_TO_EDGE
-    border = GL_CLAMP_TO_BORDER
-    repeat = GL_REPEAT
-    mclamp = GL_MIRROR_CLAMP_TO_EDGE
-    mrepeat = GL_MIRRORED_REPEAT
+    clamp = gl.GL_CLAMP_TO_EDGE
+    border = gl.GL_CLAMP_TO_BORDER
+    repeat = gl.GL_REPEAT
+    mclamp = gl.GL_MIRROR_CLAMP_TO_EDGE
+    mrepeat = gl.GL_MIRRORED_REPEAT
 
     @classmethod
     def get(cls, value):
@@ -29,22 +30,22 @@ class twrap(IntEnum):
             raise ValueError("Invalid wrap value: {}".format(value))
 
 class tfilter(IntEnum):
-    linear = GL_LINEAR
-    nearest = GL_NEAREST
-    linear_mip_nearest = GL_LINEAR_MIPMAP_NEAREST
-    linear_mip_linear = GL_LINEAR_MIPMAP_LINEAR
-    nearest_mip_linear = GL_NEAREST_MIPMAP_LINEAR
+    linear = gl.GL_LINEAR
+    nearest = gl.GL_NEAREST
+    linear_mip_nearest = gl.GL_LINEAR_MIPMAP_NEAREST
+    linear_mip_linear = gl.GL_LINEAR_MIPMAP_LINEAR
+    nearest_mip_linear = gl.GL_NEAREST_MIPMAP_LINEAR
     none = 0
 
 class tformat(IntEnum):
-    red = GL_RED
-    rg = GL_RG
-    rgb = GL_RGB
-    bgr = GL_BGR
-    rgba = GL_RGBA
-    bgra = GL_BGRA
-    depth_stencil = GL_DEPTH_STENCIL
-    depth = GL_DEPTH_COMPONENT
+    red = gl.GL_RED
+    rg = gl.GL_RG
+    rgb = gl.GL_RGB
+    bgr = gl.GL_BGR
+    rgba = gl.GL_RGBA
+    bgra = gl.GL_BGRA
+    depth_stencil = gl.GL_DEPTH_STENCIL
+    depth = gl.GL_DEPTH_COMPONENT
     default = 0
 
     @staticmethod
@@ -62,10 +63,10 @@ class tformat(IntEnum):
             raise ValueError("Invalid input array, last dimension must be in [1, 2, 3, 4]")
 
 class ttype(IntEnum):
-    float32 = GL_FLOAT
-    float16 = GL_HALF_FLOAT
-    uint8 = GL_UNSIGNED_BYTE,
-    uint24_8 = GL_UNSIGNED_INT_24_8
+    float32 = gl.GL_FLOAT
+    float16 = gl.GL_HALF_FLOAT
+    uint8 = gl.GL_UNSIGNED_BYTE,
+    uint24_8 = gl.GL_UNSIGNED_INT_24_8
 
     @classmethod
     def from_dtype(cls, dtype : np.dtype):
@@ -109,33 +110,33 @@ def get_sized_format(fmt, tp):
     assert isinstance(fmt, tformat) and isinstance(tp, ttype)
     mapping = {
         ttype.float32: {
-            tformat.rgb: GL_RGB32F,
-            tformat.bgr: GL_RGB32F,
-            tformat.red: GL_R32F,
-            tformat.rg: GL_RG32F,
-            tformat.rgba: GL_RGBA32F,
-            tformat.bgra: GL_RGBA32F,
-            tformat.depth: GL_DEPTH_COMPONENT32F
+            tformat.rgb: gl.GL_RGB32F,
+            tformat.bgr: gl.GL_RGB32F,
+            tformat.red: gl.GL_R32F,
+            tformat.rg: gl.GL_RG32F,
+            tformat.rgba: gl.GL_RGBA32F,
+            tformat.bgra: gl.GL_RGBA32F,
+            tformat.depth: gl.GL_DEPTH_COMPONENT32F
         },
         ttype.float16: {
-            tformat.rgb: GL_RGB16F,
-            tformat.bgr: GL_RGB16F,
-            tformat.red: GL_R16F,
-            tformat.rg: GL_RG16F,
-            tformat.rgba: GL_RGBA16F,
-            tformat.bgra: GL_RGBA16F,
-            tformat.depth: GL_DEPTH_COMPONENT16
+            tformat.rgb: gl.GL_RGB16F,
+            tformat.bgr: gl.GL_RGB16F,
+            tformat.red: gl.GL_R16F,
+            tformat.rg: gl.GL_RG16F,
+            tformat.rgba: gl.GL_RGBA16F,
+            tformat.bgra: gl.GL_RGBA16F,
+            tformat.depth: gl.GL_DEPTH_COMPONENT16
         },
         ttype.uint8: {
-            tformat.red: GL_R8,
-            tformat.rg: GL_RG8,
-            tformat.rgb: GL_RGB8,
-            tformat.bgr: GL_RGB8,
-            tformat.rgba: GL_RGBA8,
-            tformat.bgra: GL_RGBA8,
+            tformat.red: gl.GL_R8,
+            tformat.rg: gl.GL_RG8,
+            tformat.rgb: gl.GL_RGB8,
+            tformat.bgr: gl.GL_RGB8,
+            tformat.rgba: gl.GL_RGBA8,
+            tformat.bgra: gl.GL_RGBA8,
         },
         ttype.uint24_8: {
-            tformat.depth: GL_DEPTH24_STENCIL8
+            tformat.depth: gl.GL_DEPTH24_STENCIL8
         }
     }
     return mapping[tp][fmt]
@@ -155,7 +156,7 @@ def get_channels(fmt):
 
 class TextureBase(GLObject, abc.ABC):
     def __init__(self, size, tex_type, fmt, tp, flt, wrap):
-        super(TextureBase, self).__init__(glGenTextures, glDeleteTextures)
+        super(TextureBase, self).__init__(gl.glGenTextures, gl.glDeleteTextures)
         self._size = size
         self._ttype = ttype.get(tp)
         self._tformat = fmt
@@ -185,27 +186,27 @@ class TextureBase(GLObject, abc.ABC):
                      s:twrap=None, 
                      t:twrap=None,
                      r:twrap=None):
-        glBindTexture(self._type, self.id)
+        gl.glBindTexture(self._type, self.id)
         s0, t0, r0 = self._wrap
         if s:
-            glTexParameteri(self._type, GL_TEXTURE_WRAP_S, s)
+            gl.glTexParameteri(self._type, gl.GL_TEXTURE_WRAP_S, s)
             s0 = s
         if t:
-            glTexParameteri(self._type, GL_TEXTURE_WRAP_T, t)
+            gl.glTexParameteri(self._type, gl.GL_TEXTURE_WRAP_T, t)
             t0 = t
         if r:
-            glTexParameteri(self._type, GL_TEXTURE_WRAP_R, r)
+            gl.glTexParameteri(self._type, gl.GL_TEXTURE_WRAP_R, r)
             r0 = r
         self._wrap = (s0, t0, r0)
-        glBindTexture(self._type, 0)
+        gl.glBindTexture(self._type, 0)
         
     def set_filter(self, min_filter : tfilter, mag_filter : tfilter = None):
         if mag_filter is None:
             mag_filter = min_filter
-        glBindTexture(self._type, self.id)
-        glTexParameteri(self._type, GL_TEXTURE_MIN_FILTER, min_filter)
-        glTexParameteri(self._type, GL_TEXTURE_MAG_FILTER, mag_filter)
-        glBindTexture(self._type, 0)
+        gl.glBindTexture(self._type, self.id)
+        gl.glTexParameteri(self._type, gl.GL_TEXTURE_MIN_FILTER, min_filter)
+        gl.glTexParameteri(self._type, gl.GL_TEXTURE_MAG_FILTER, mag_filter)
+        gl.glBindTexture(self._type, 0)
         self._filter = (min_filter, mag_filter)
     
     @abc.abstractmethod
@@ -262,15 +263,15 @@ class TextureBase(GLObject, abc.ABC):
 
     def bind(self, slot=-1):
         if slot >= 0:
-            glActiveTexture(GL_TEXTURE0 + slot)
-        glBindTexture(self._type, self.id)
+            gl.glActiveTexture(gl.GL_TEXTURE0 + slot)
+        gl.glBindTexture(self._type, self.id)
 
     def unbind(self):
-        glBindTexture(self._type, 0)
+        gl.glBindTexture(self._type, 0)
 
     def generate_mipmaps(self):
-        glBindTexture(self._type, self._id)
-        glGenerateMipmap(self._type)
+        gl.glBindTexture(self._type, self._id)
+        gl.glGenerateMipmap(self._type)
 
 
 class Texture2D(TextureBase):
@@ -309,7 +310,7 @@ class Texture2D(TextureBase):
         if not isinstance(wrap, (list, tuple)):
             wrap = (wrap, wrap)
         super(Texture2D, self).__init__(size=shape,
-                                        tex_type=GL_TEXTURE_2D,
+                                        tex_type=gl.GL_TEXTURE_2D,
                                         fmt=tformat,
                                         tp=tp,
                                         wrap=wrap,
@@ -332,15 +333,15 @@ class Texture2D(TextureBase):
         if flip:
             data = np.copy(data[::-1])
         
-        old_align = glGetIntegerv(GL_UNPACK_ALIGNMENT)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, self.cols)
-        glTexSubImage2D(self._type, 0, 0, 0, self.cols, self.rows, fmt, self.ttype, data)
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, old_align)
+        old_align = gl.glGetIntegerv(gl.GL_UNPACK_ALIGNMENT)
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        gl.glPixelStorei(gl.GL_UNPACK_ROW_LENGTH, self.cols)
+        gl.glTexSubImage2D(self._type, 0, 0, 0, self.cols, self.rows, fmt, self.ttype, data)
+        gl.glPixelStorei(gl.GL_UNPACK_ROW_LENGTH, 0)
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, old_align)
         
         if self.with_mipmaps:
-            glGenerateMipmap(self._type)
+            gl.glGenerateMipmap(self._type)
 
         self.unbind()
 
@@ -348,13 +349,13 @@ class Texture2D(TextureBase):
         if depth != None:
             logging.warning("You passed depth for resizing a 2D Texture")
         self.bind()
-        glTexImage2D(GL_TEXTURE_2D, 0, self.sized_format, cols, rows, 0, self.format, self.ttype, None)
+        gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, self.sized_format, cols, rows, 0, self.format, self.ttype, None)
         self._size = (rows, cols)
         self.unbind()
 
     def download(self, flip=True):
         self.bind()
-        buf = glGetTexImage(GL_TEXTURE_2D,
+        buf = gl.glGetTexImage(gl.GL_TEXTURE_2D,
                             0,
                             self.format,
                             self.ttype)
@@ -699,7 +700,7 @@ class Envmap(TextureBase):
         if not isinstance(wrap, (list, tuple)):
             wrap = (wrap, wrap, wrap)
         super(Envmap, self).__init__(size=size,
-                                     tex_type=GL_TEXTURE_CUBE_MAP,
+                                     tex_type=gl.GL_TEXTURE_CUBE_MAP,
                                      fmt=tformat,
                                      tp=tp,
                                      wrap=wrap,
@@ -726,10 +727,10 @@ class Envmap(TextureBase):
         cube = Mesh.cube(size=2)
         fbo.bind()
         for i, V in enumerate(Envmap.capture_views):
-            fbo.attach_texture(GL_COLOR_ATTACHMENT0, envmap, 
-                               texture_target=GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
-            glClearColor(0, 1, 0, 1)
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0, envmap, 
+                               texture_target=gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
+            gl.glClearColor(0, 1, 0, 1)
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
             cube.render(shader,
                         view=V,
                         projection=capture_projection,
@@ -756,9 +757,9 @@ class Envmap(TextureBase):
         
         fbo.bind()
         for i, V in enumerate(Envmap.capture_views):
-            fbo.attach_texture(GL_COLOR_ATTACHMENT0, irradiance_map, 
-                               texture_target=GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0, irradiance_map, 
+                               texture_target=gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
             cube.render(irradiance_shader,
                         view=V,
                         projection=capture_projection,
@@ -793,10 +794,10 @@ class Envmap(TextureBase):
 
             roughness = mip / (max_mipmap_levels - 1.0)
             for i, V in enumerate(Envmap.capture_views):
-                fbo.attach_texture(GL_COLOR_ATTACHMENT0, specular_map,
+                fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0, specular_map,
                                    mip_level=mip, 
-                                   texture_target=GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+                                   texture_target=gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
+                gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
                 cube.render(prefilter_shader,
                             view=V,
                             projection=capture_projection,
@@ -808,7 +809,7 @@ class Envmap(TextureBase):
                                 tformat=tformat.red,
                                 tp=ttype.float16)
         fbo = FrameBuffer(self.size)
-        fbo.attach_texture(GL_COLOR_ATTACHMENT0, lut_texture)
+        fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0, lut_texture)
         fbo.bind()
         render_fullscreen_triangle(0, 0, self.cols, self.rows,
                                    Envmap.brdf_fs,
@@ -820,23 +821,23 @@ class Envmap(TextureBase):
     def resize(self, cols, rows, depth=None):
         if depth != None:
             logging.warning("You passed depth for resizing a Envmap Texture")
-        glBindTexture(self._type, self.id)
+        gl.glBindTexture(self._type, self.id)
         for i in range(6):
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, self.sized_format, 
+            gl.glTexImage2D(gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, self.sized_format, 
                             cols, rows, 0, self.format, self.ttype, None)
         self._size = (cols, rows)
-        glBindTexture(self._type, 0)
+        gl.glBindTexture(self._type, 0)
 
     def download(self):
         from OpenGL.raw.GL.VERSION import GL_1_1
         result = np.zeros((3*self.rows, 4*self.cols, self.channels), self.dtype)
         self.bind()
-        sides = [(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 1, 2),
-                 (GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 1, 0),
-                 (GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, 1),
-                 (GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 2, 1),
-                 (GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 1, 1),
-                 (GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 1, 3)]
+        sides = [(gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X, 1, 2),
+                 (gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 1, 0),
+                 (gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, 1),
+                 (gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 2, 1),
+                 (gl.GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 1, 1),
+                 (gl.GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 1, 3)]
         buf = np.empty((self.rows, self.cols, self.channels), dtype=self.dtype)
         for side, dj, di in sides:
             GL_1_1.glGetTexImage(side,
