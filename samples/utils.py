@@ -11,12 +11,13 @@ def _convert_to_numpy_arrays(data):
         # Download and convert all attachments
         return list(tex.download() for tex in data.attachments.values())
     elif isinstance(data, Texture2D):
-        return [data.download()]
+        return [data.download(flip=False)]
     else:
         raise ValueError(f"Unsupported data type: {type(data)}")
 
 def display_images(images,
                    title=None,
+                   titles=None,
                    size=10, 
                    **kwargs):
     """
@@ -36,8 +37,10 @@ def display_images(images,
                             num_images, 
                             figsize=(num_images * size, size),
                             squeeze=False)
-    for ax, img in zip(axs.flat, imgs):
+    for idx, (ax, img) in enumerate(zip(axs.flat, imgs)):
         ax.imshow(img, **kwargs)
+        if titles:
+            ax.set_title(titles[idx])
         ax.axis('off')
 
     if title:

@@ -1,12 +1,15 @@
 import abc
 import ctypes
+from distutils.command.build import build
 import logging
+from multiprocessing.dummy import Array
 import os
 from enum import Enum, IntEnum
 from typing import Union
 
 import imageio
 import numpy as np
+from numpy.typing import ArrayLike
 import OpenGL.GL as gl
 
 from pygl.base import GLObject, context_cached
@@ -855,7 +858,7 @@ class Envmap(TextureBase):
 def get_default_texture_2d()->Texture2D:
     return Texture2D.from_numpy(np.full((1, 1, 4), 255, dtype=np.uint8))
 
-def as_texture_2d(source:Union[str,Texture2D,np.ndarray]):
+def as_texture_2d(source:Union[str,Texture2D,ArrayLike]):
     if isinstance(source, Texture2D):
         return source
     elif isinstance(source, str):
@@ -864,3 +867,13 @@ def as_texture_2d(source:Union[str,Texture2D,np.ndarray]):
         return Texture2D.from_numpy(source)
     else:
         raise TypeError("Cannot convert {} to Texture2D".format(type(source)))
+
+def texture_like(source:Union[Texture2D, ArrayLike]):
+    if isinstance(source, Texture2D):
+        return Texture2D(source.shape, 
+                         source._tformat,
+                         tp=source._ttype,
+                         tfilter=source._filter,
+                         build_mipmaps=False)
+    else:
+        return Texture2D.from_numpy(np.zeros_like(np.asanyarray(source)))
