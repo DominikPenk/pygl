@@ -49,7 +49,6 @@ def egl_convert_to_int_array(dict_attrs):
 
 class EGLContext(Context):
     def __init__(self, size):
-        super(EGLContext, self).__init__()
         self.height, self.width = size
 
         # Init EGL
@@ -94,6 +93,8 @@ class EGLContext(Context):
         self._context = eglCreateContext(self._display, egl_config, EGL_NO_CONTEXT, None)
         if self._context == EGL_NO_CONTEXT:
             raise RuntimeError("Context is EGL_NOCONTEXT")
+        
+        super(EGLContext, self).__init__()
 
     def _make_current(self):
         if not eglMakeCurrent(self._display, self._surface, self._surface, self._context):

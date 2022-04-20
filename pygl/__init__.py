@@ -7,6 +7,8 @@ from pygl.shader import Shader
 from pygl.texture import Texture2D, ttype, tformat
 from pygl.enable import enable, enables
 
+from pygl.glstate import CompareFunc, CullingMode, BlendFactor, BlendEquation
+
 # Try to import egl
 try:
     from pygl.egl_context import EGLContext
@@ -31,6 +33,7 @@ def get_offscreen_context(size=(1, 1), force_glfw=False):
                 "not have an x-server.")
         ctx = GLFWContext(size, visible=False)
     ctx.set_active()
+    return ctx
 
 def assure_context(fn):
     """Ensures that a default context is enabled.

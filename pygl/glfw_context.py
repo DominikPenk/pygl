@@ -12,7 +12,6 @@ class GLFWContext(Context):
     glfw_windows = 0
 
     def __init__(self, shape, name="Window", visible=True):
-        super(GLFWContext, self).__init__()
         self.__title = name
         assert glfw.init(), "Could not initialize GLFW"
         glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 4)
@@ -30,6 +29,7 @@ class GLFWContext(Context):
         self._imgui_impl = GlfwRenderer(self._context)
         
         self.clear_color = np.array([0.1, 0.1, 0.1, 1.0], dtype=np.float32)
+        super(GLFWContext, self).__init__()
 
     def __del__(self):
         super().__del__()

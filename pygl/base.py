@@ -4,6 +4,8 @@ import logging
 import weakref
 import abc
 
+from . import glstate
+
 class GLObject(object):
     def __init__(self, constructor=None, destructor = None):
         self._id = constructor(1) if constructor is not None else 0
@@ -28,7 +30,7 @@ class GLObject(object):
     def id(self):
         return self._id
 
-class Context(abc.ABC):
+class Context(abc.ABC, glstate._GLState):
     context_stack = []
     __refs__ = []
 
@@ -42,11 +44,15 @@ class Context(abc.ABC):
         return cls.__refs__
 
     def __init__(self):
+        """Initialization should always be called at the end of the subclass constructor"""
         self.__created_objects = []
         self.fbo_stack = []
         self._dummy_vao = 0
         
         Context.__refs__.append(weakref.ref(self))
+
+        self.set_active()
+        glstate._GLState.__init__(self, True)
 
     def __del__(self):
         logging.debug("Context.__del__")
@@ -121,6 +127,7 @@ class Context(abc.ABC):
         if self._dummy_vao == 0:
             self._dummy_vao = gl.glGenVertexArrays(1)
         return self._dummy_vao
+
 
 def context_cached(func, cache=None):
     if cache is None:
