@@ -15,11 +15,21 @@ class FrameBuffer(GLObject):
         self.__color_buffers = []
         self.__size = shape
         self.__rbo = 0
+        self._are_draw_buffers_attached = True
+        self._is_read_buffer_attached = True
 
-        with self:
-            if gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) != gl.GL_FRAMEBUFFER_COMPLETE:
-                raise RuntimeError("Failed to initialize FBO")
-    
+        self.__default_readbuffer = gl.GLenum(gl.glGetIntegerv(gl.GL_READ_BUFFER))
+
+    def _attach_buffers(self):
+        if not self.has_depth_texture and self.__rbo == 0:
+            self.__rbo = gl.glGenRenderbuffers(1)
+            gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.__rbo)
+            gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_DEPTH_COMPONENT24, self.width, self.height)
+            gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT, gl.GL_RENDERBUFFER, self.__rbo)
+        if self.__color_buffers:
+            gl.glDrawBuffers(len(self.__color_buffers), self.__color_buffers)
+        self._are_draw_buffers_attached = True
+
     def free(self):
         super().free()
         if self.__rbo != 0:
@@ -62,20 +72,46 @@ class FrameBuffer(GLObject):
         if slot not in [gl.GL_DEPTH_ATTACHMENT, gl.GL_DEPTH_STENCIL_ATTACHMENT] and slot not in self.__color_buffers:
             self.__color_buffers.append(slot)
         self.bind()
-        texture.bind()
-        textarget = kwargs.get("texture_target", gl.GL_TEXTURE_2D)
-        gl.glFramebufferTexture2D(
+        gl.glFramebufferTexture(
             gl.GL_FRAMEBUFFER, 
             slot, 
-            textarget,
             texture.id, 
             mip_level)      
+        self._attach_buffers()
         if gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) != gl.GL_FRAMEBUFFER_COMPLETE:
             raise RuntimeError("Failed to create FBO")
-        texture.unbind()
         self.unbind()
         return texture
         
+    def detach_draw_buffer(self):
+        if not self._are_draw_buffers_attached:
+            logging.warning("Draw buffer is already detached")
+
+        with self:
+            self._are_draw_buffers_attached = False
+            gl.glDrawBuffer(gl.GL_NONE)
+
+    def attach_draw_buffers(self):
+        if self._are_draw_buffers_attached:
+            logging.warning("Draw buffers are already attached")
+        with self:
+            self._attach_buffers()
+
+    def detach_read_buffer(self):
+        if not self._is_read_buffer_attached:
+            logging.warning("Read buffer is already detached")
+
+        with self:
+            self._is_read_buffer_attached = False
+            gl.glReadBuffer(gl.GL_NONE)
+    
+    def attach_read_buffer(self, target:gl.GLenum=None):
+        if target is None:
+            target = self.__default_readbuffer
+        with self:
+            self._is_read_buffer_attached = True
+            gl.glReadBuffer(target)
+
     def resize(self, shape):
         if shape[1] != self.width or shape[0] != self.height:
             self.__size = shape
@@ -91,15 +127,6 @@ class FrameBuffer(GLObject):
         should_be_bound = Context.current().try_push_fbo(self)
         if should_be_bound:
             gl.glBindFramebuffer(gl.GL_FRAMEBUFFER, self.id)
-
-            if not self.has_depth_texture and self.__rbo == 0:
-                self.__rbo = gl.glGenRenderbuffers(1)
-                gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.__rbo)
-                gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_DEPTH_COMPONENT24, self.width, self.height)
-                gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT, gl.GL_RENDERBUFFER, self.__rbo)
-            if self.__color_buffers:
-                gl.glDrawBuffers(len(self.__color_buffers), self.__color_buffers)
-
         gl.glViewport(0, 0, self.size[1], self.size[0])
 
     def unbind(self):
@@ -138,3 +165,16 @@ class FrameBuffer(GLObject):
     @property
     def has_depth_texture(self):
         return gl.GL_DEPTH_ATTACHMENT in self.attachments or gl.GL_DEPTH_STENCIL_ATTACHMENT in self.attachments
+
+    @property
+    def is_readbuffer_attached(self):
+        return self._is_read_buffer_attached
+    
+    @property
+    def are_draw_buffers_attached(self):
+        return self._are_draw_buffers_attached
+
+    @property
+    def is_valid(self):
+        with self:
+            return gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) == gl.GL_FRAMEBUFFER_COMPLETE
