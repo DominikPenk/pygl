@@ -2,8 +2,8 @@ from pathlib import Path
 
 import numpy as np
 import trimesh
-import trimesh.visual
 import trimesh.creation
+import trimesh.visual
 
 
 class Mesh(trimesh.Trimesh):
@@ -104,11 +104,9 @@ class Mesh(trimesh.Trimesh):
                                    visual=visual)
 
     def render(self, shader=None, **kwargs):
-        import pygl.shader
-        from pygl import transform
         if not hasattr(self, '_render_data'):
             # Setup rendering state of this mesh
-            from pygl.render_data import MeshRenderData
+            from .render_data import MeshRenderData
             self._render_data = MeshRenderData(self)
 
         self._render_data.render(shader=shader, **kwargs)  

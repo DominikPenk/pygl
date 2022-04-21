@@ -1,10 +1,12 @@
-import numpy as np
-import OpenGL.GL as gl
 import ctypes
 
-from .base import Context
+import numpy as np
+import OpenGL.GL as gl
+
 from . import buffers
+from .base import Context
 from .shader import get_flat_shader
+
 
 class MeshRenderData(object):
     wire_shader = None

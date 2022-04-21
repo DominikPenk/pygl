@@ -1,10 +1,12 @@
-import numpy as np
-import OpenGL.GL as gl
+import abc
 import logging
 import weakref
-import abc
+
+import numpy as np
+import OpenGL.GL as gl
 
 from . import glstate
+
 
 class GLObject(object):
     def __init__(self, constructor=None, destructor = None):

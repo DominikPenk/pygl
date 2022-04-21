@@ -1,8 +1,9 @@
-import logging
 import numpy as np
 import OpenGL.GL as gl
-from pygl.shader import Shader
-from pygl.buffers import VertexArrayObject
+
+from .buffers import VertexArrayObject
+from .shader import Shader
+
 
 def fullscreen_triangle_vs(version=430):
 	code = '''#version <<version>>

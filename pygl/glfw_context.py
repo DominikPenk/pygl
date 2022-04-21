@@ -1,12 +1,13 @@
-import numpy as np
-import OpenGL.GL as GL
-import glfw
 import logging
 
+import glfw
 import imgui
+import numpy as np
+import OpenGL.GL as GL
 from imgui.integrations.glfw import GlfwRenderer
 
 from .base import Context
+
 
 class GLFWContext(Context):
     glfw_windows = 0

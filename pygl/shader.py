@@ -1,15 +1,13 @@
 import logging as log
-import numpy as np
-import OpenGL.GL as gl
 import os
 import time
 
-from .base import GLObject
-from .texture import Texture2D, TextureBase
+import numpy as np
+import OpenGL.GL as gl
 
-from pygl.base import GLObject, context_cached
-from pygl.texture import TextureBase
-from pygl.buffers import ShaderStorageBuffer
+from .base import GLObject, context_cached
+from .buffers import ShaderStorageBuffer
+from .texture import Texture2D, TextureBase
 
 SHADER_TYPE_MAP = {
     # Short names
@@ -133,8 +131,9 @@ class Shader(GLObject):
             return (None, None, None)
         else:
             import ctypes
-            from OpenGL.raw.GL.VERSION.GL_2_0 import glGetProgramiv
+
             from OpenGL.GL import GL_COMPUTE_WORK_GROUP_SIZE
+            from OpenGL.raw.GL.VERSION.GL_2_0 import glGetProgramiv
             if not self.up_to_date:
                 self._compile()
             sizes = np.ones([3], dtype=np.int32)
@@ -261,13 +260,14 @@ def get_bling_phong_shader(lighting_mode='spherical_harmonics'):
     """Return a Phong shader with Bling lighting model
     """
     assert lighting_mode in ['spherical_harmonics']
-    from pygl.shaders.phong_shader import phong_vs, phong_fs
+    from .shaders.phong_shader import phong_fs, phong_vs
+
     # TODO: Different lighting models
     return Shader(vertex=phong_vs, fragment=phong_fs)
 
 @context_cached
 def get_pbr_shader():
-    from pygl.shaders.pbr_shader import pbr_vs, pbr_fs
+    from .shaders.pbr_shader import pbr_fs, pbr_vs
     return Shader(vertex=pbr_vs, fragment=pbr_fs)
 
 @context_cached
@@ -307,7 +307,7 @@ def get_flat_with_vc():
     return Shader(vertex=vertex_shader, fragment=fragment_shader)
 
 def get_normal_phong_shader():
-    from pygl.shaders.normal_shader import normal_vs, normal_fs
+    from .shaders.normal_shader import normal_fs, normal_vs
     return Shader(vertex=normal_vs, fragment=normal_fs)
 
 def get_flat_normal_shader():

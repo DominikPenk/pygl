@@ -2,7 +2,8 @@ import os
 import re
 
 import imgui
-from pygl.glfw_context import GLFWContext
+
+from .glfw_context import GLFWContext
 
 # TODO: Handle DPI using glfw.get_window_content_scale()
 

@@ -1,19 +1,17 @@
 import abc
 import ctypes
-from distutils.command.build import build
 import logging
-from multiprocessing.dummy import Array
 import os
 from enum import Enum, IntEnum
 from typing import Union
 
 import imageio
 import numpy as np
-from numpy.typing import ArrayLike
 import OpenGL.GL as gl
+from numpy.typing import ArrayLike
 
-from pygl.base import GLObject, context_cached
-from pygl.enable import enables
+from .base import GLObject, context_cached
+from .enable import enables
 
 
 class twrap(IntEnum):
@@ -370,7 +368,7 @@ class Texture2D(TextureBase):
         return img
 
 class Envmap(TextureBase):
-    from pygl.transform import look_at
+    from .transform import look_at
     capture_views = [
         look_at([0.0, 0.0, 0.0], [ 1.0, 0.0, 0.0], [0, -1.0, 0.0]),
         look_at([0.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0, -1.0, 0.0]),
@@ -714,9 +712,9 @@ class Envmap(TextureBase):
     @classmethod
     @enables(gl_cull_face=None)
     def from_equirectengular(cls, path, size=(512, 512)):
-        from pygl import Mesh, Shader
-        from pygl.camera import perspective
-        from pygl.framebuffer import FrameBuffer
+        from . import Mesh, Shader
+        from .camera import perspective
+        from .framebuffer import FrameBuffer
         in_tex = Texture2D.load(path)
 
         fbo = FrameBuffer(size)
@@ -745,8 +743,8 @@ class Envmap(TextureBase):
     def get_irradiance(self, size):
         """Computes the irradiance from the environment map"""
         from pygl import Mesh, Shader
-        from pygl.camera import perspective
-        from pygl.framebuffer import FrameBuffer
+        from .camera import perspective
+        from .framebuffer import FrameBuffer
 
         fbo = FrameBuffer(size)
         irradiance_map = Envmap(size=size,
@@ -773,10 +771,10 @@ class Envmap(TextureBase):
     @enables(gl_cull_face=None)
     def get_specular_map(self, size, max_mipmap_levels=5):
         """Computes prefiltered specular maps from the environment map"""
-        from pygl import Mesh, Shader
-        from pygl.camera import perspective
-        from pygl.framebuffer import FrameBuffer
-        from pygl.immediate import render_fullscreen_triangle
+        from . import Mesh, Shader
+        from .camera import perspective
+        from .framebuffer import FrameBuffer
+        from .immediate import render_fullscreen_triangle
         
         specular_map = Envmap(size=size,
                                 tformat=self._tformat,

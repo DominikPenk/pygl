@@ -1,8 +1,10 @@
+import ctypes
+
 import numpy as np
 import OpenGL.GL as gl
 
-import ctypes
-from .base import GLObject, Context
+from .base import Context, GLObject
+
 
 class BufferObject(GLObject):
 

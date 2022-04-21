@@ -1,15 +1,16 @@
-import OpenGL.GL as gl
 import numpy as np
-import pygl
-from pygl.framebuffer import FrameBuffer
-from pygl.camera import Camera
+import OpenGL.GL as gl
+
+from . import get_offscreen_context
+from .camera import Camera
+from .framebuffer import FrameBuffer
 
 
 class VisualizationContext(object):
     stack = []
 
     def __init__(self, shape, **kwargs):
-        self._ctx = pygl.get_offscreen_context(shape)
+        self._ctx = get_offscreen_context(shape)
         self._ctx.set_active()
 
         fbo_dtype = kwargs.pop("fbo_dtype", np.uint8)

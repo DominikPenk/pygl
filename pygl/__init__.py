@@ -1,20 +1,19 @@
 import logging
-from pygl.base import Context
 
-from pygl.mesh import Mesh
-from pygl.camera import Camera
-from pygl.shader import Shader
-from pygl.texture import Texture2D, ttype, tformat
-from pygl.enable import enable, enables
-
-from pygl.glstate import CompareFunc, CullingMode, BlendFactor, BlendEquation
+from .base import Context
+from .camera import Camera
+from .enable import enable, enables
+from .glstate import BlendEquation, BlendFactor, CompareFunc, CullingMode
+from .mesh import Mesh
+from .shader import Shader
+from .texture import Texture2D, tformat, ttype
 
 # Try to import egl
 try:
-    from pygl.egl_context import EGLContext
+    from .egl_context import EGLContext
     _has_egl_context = True
 except ImportError as err:
-    from pygl.glfw_context import GLFWContext
+    from .glfw_context import GLFWContext
     _has_egl_context = False
 
 def get_offscreen_context(size=(1, 1), force_glfw=False):
@@ -66,8 +65,8 @@ def _set_default_context(context):
     assure_context.__default_context = context
 assure_context.set_default_context = _set_default_context
 
-from pygl.viz_context import VisualizationContext
-from pygl.glfw_context import GLFWContext        
+from .glfw_context import GLFWContext
+from .viz_context import VisualizationContext
 
 __all__ = [
     'get_offscreen_context',

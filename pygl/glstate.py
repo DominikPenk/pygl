@@ -1,10 +1,9 @@
-from collections import namedtuple
-from cv2 import equalizeHist
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Union, Tuple
+from typing import Union
 
 import OpenGL.GL as gl
+
 
 class CompareFunc(IntEnum):
     never = gl.GL_NEVER

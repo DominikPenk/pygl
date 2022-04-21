@@ -1,9 +1,11 @@
 import logging
+
 import numpy as np
 import OpenGL.GL as gl
 
-from pygl.base import GLObject, Context
-from pygl.texture import Texture2D, tfilter, tformat, ttype
+from .base import Context, GLObject
+from .texture import Texture2D, tfilter, tformat, ttype
+
 
 class FrameBuffer(GLObject):
     def __init__(self, shape):

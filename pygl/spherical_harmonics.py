@@ -1,8 +1,8 @@
 import json
 import os
-import zipfile
-import urllib.request
 import shutil
+import urllib.request
+import zipfile
 
 import numpy as np
 

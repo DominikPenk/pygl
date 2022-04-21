@@ -37,7 +37,7 @@ from OpenGL.EGL import (
 )
 from ctypes import pointer
 
-from pygl.base import Context
+from . base import Context
 
 __all__ = ['EGLContext']
 

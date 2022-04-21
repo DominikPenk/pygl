@@ -4,8 +4,8 @@ from typing import Union
 
 from numpy.typing import ArrayLike
 
-import pygl.shader as shader_lib
-import pygl.texture as texture_lib
+from . import shader as shader_lib
+from . import texture as texture_lib
 
 # TODO: Support non RGBA textures
 
