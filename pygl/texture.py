@@ -367,7 +367,7 @@ class Texture2D(TextureBase):
         self.unbind()
         return img
 
-class Envmap(TextureBase):
+class CubeMap(TextureBase):
     from .transform import look_at
     capture_views = [
         look_at([0.0, 0.0, 0.0], [ 1.0, 0.0, 0.0], [0, -1.0, 0.0]),
@@ -692,7 +692,7 @@ class Envmap(TextureBase):
     """
 
     def __init__(self, size,
-                 tformat = tformat.rgb,
+                 tformat:tformat = tformat.rgb,
                  wrap = (twrap.clamp, twrap.clamp, twrap.clamp),
                  tp = ttype.float32,
                  tfilter = tfilter.linear,
@@ -700,7 +700,7 @@ class Envmap(TextureBase):
 
         if not isinstance(wrap, (list, tuple)):
             wrap = (wrap, wrap, wrap)
-        super(Envmap, self).__init__(size=size,
+        super(CubeMap, self).__init__(size=size,
                                      tex_type=gl.GL_TEXTURE_CUBE_MAP,
                                      fmt=tformat,
                                      tp=tp,
@@ -727,7 +727,7 @@ class Envmap(TextureBase):
                         fragment=cls.convert_fs)
         cube = Mesh.cube(size=2)
         fbo.bind()
-        for i, V in enumerate(Envmap.capture_views):
+        for i, V in enumerate(CubeMap.capture_views):
             fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0, envmap, 
                                texture_target=gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
             gl.glClearColor(0, 1, 0, 1)
@@ -747,17 +747,17 @@ class Envmap(TextureBase):
         from .framebuffer import FrameBuffer
 
         fbo = FrameBuffer(size)
-        irradiance_map = Envmap(size=size,
+        irradiance_map = CubeMap(size=size,
                                 tformat=self._tformat,
                                 tp=self._ttype)
-        irradiance_shader = Shader(vertex=Envmap.cubemap_vs,
-                                   fragment=Envmap.irradiance_convolution_fs)
+        irradiance_shader = Shader(vertex=CubeMap.cubemap_vs,
+                                   fragment=CubeMap.irradiance_convolution_fs)
         irradiance_shader.use()
         capture_projection = perspective(np.radians(90.0), 1.0, 0.1, 10.0)
         cube = Mesh.cube(size=2)
         
         fbo.bind()
-        for i, V in enumerate(Envmap.capture_views):
+        for i, V in enumerate(CubeMap.capture_views):
             fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0, irradiance_map, 
                                texture_target=gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
             gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
@@ -776,14 +776,14 @@ class Envmap(TextureBase):
         from .framebuffer import FrameBuffer
         from .immediate import render_fullscreen_triangle
         
-        specular_map = Envmap(size=size,
+        specular_map = CubeMap(size=size,
                                 tformat=self._tformat,
                                 tp=self._ttype,
                                 tfilter=(tfilter.linear_mip_linear, tfilter.linear),
                                 allocate_mipmap=True)
         
-        prefilter_shader = Shader(vertex=Envmap.cubemap_vs,
-                                  fragment=Envmap.prefilter_fs)
+        prefilter_shader = Shader(vertex=CubeMap.cubemap_vs,
+                                  fragment=CubeMap.prefilter_fs)
 
         capture_projection = perspective(np.radians(90.0), 1.0, 0.1, 10.0)
         cube = Mesh.cube(size=2)
@@ -794,7 +794,7 @@ class Envmap(TextureBase):
             fbo.bind()
 
             roughness = mip / (max_mipmap_levels - 1.0)
-            for i, V in enumerate(Envmap.capture_views):
+            for i, V in enumerate(CubeMap.capture_views):
                 fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0, specular_map,
                                    mip_level=mip, 
                                    texture_target=gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i)
@@ -813,7 +813,7 @@ class Envmap(TextureBase):
         fbo.attach_texture(gl.GL_COLOR_ATTACHMENT0, lut_texture)
         fbo.bind()
         render_fullscreen_triangle(0, 0, self.cols, self.rows,
-                                   Envmap.brdf_fs,
+                                   CubeMap.brdf_fs,
                                    version=330)
         fbo.unbind()
 
