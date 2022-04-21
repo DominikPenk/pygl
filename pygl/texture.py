@@ -695,7 +695,7 @@ class CubeMap(TextureBase):
                  tformat:tformat = tformat.rgb,
                  wrap = (twrap.clamp, twrap.clamp, twrap.clamp),
                  tp = ttype.float32,
-                 tfilter = tfilter.linear,
+                 tfilter = tfilter.nearest,
                  allocate_mipmap=False):
 
         if not isinstance(wrap, (list, tuple)):
@@ -708,6 +708,20 @@ class CubeMap(TextureBase):
                                      flt=tfilter)
         if allocate_mipmap:
             self.generate_mipmaps()
+
+    @classmethod
+    def get_capture_views(cls, pos=None):
+        from .transform import look_at
+        if pos is None:
+            pos = np.zeros((3,), dtype=np.float32)
+        return [
+            look_at(pos, pos+[ 1.0, 0.0, 0.0], [0, -1.0, 0.0]),
+            look_at(pos, pos+[-1.0, 0.0, 0.0], [0, -1.0, 0.0]),
+            look_at(pos, pos+[0.0,  1.0, 0.0], [0, 0.0, 1.0]),
+            look_at(pos, pos+[0.0, -1.0, 0.0], [0, 0.0, -1.0]),
+            look_at(pos, pos+[0.0, 0.0,  1.0], [0, -1.0, 0.0]),
+            look_at(pos, pos+[0.0, 0.0, -1.0], [0, -1.0, 0.0])
+        ]
 
     @classmethod
     @enables(gl_cull_face=None)
@@ -821,7 +835,7 @@ class CubeMap(TextureBase):
             
     def resize(self, cols, rows, depth=None):
         if depth != None:
-            logging.warning("You passed depth for resizing a Envmap Texture")
+            logging.warning("You passed depth for resizing a CubeMap")
         gl.glBindTexture(self._type, self.id)
         for i in range(6):
             gl.glTexImage2D(gl.GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, self.sized_format, 

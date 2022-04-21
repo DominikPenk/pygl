@@ -78,17 +78,19 @@ class Context(abc.ABC, glstate._GLState):
         If it is already on top. Nothing will be pushed.
         
         Returns if the fbo was pushed onto the stack."""
-        if len(self.fbo_stack) == 0 or self.fbo_stack[-1].id != fbo.id:
-            self.fbo_stack.append(weakref.proxy(fbo))
-            return True
-        return False
+        is_new_fbo = len(self.fbo_stack) == 0 or self.fbo_stack[-1].id != fbo.id
+        self.fbo_stack.append(weakref.proxy(fbo))
+        return is_new_fbo
 
     def pop_fbo(self, fbo)->None:
         """Pops fbo from the stack. If fbo and the top of bof stack differ, this 
         raises an exception"""
-        if len(self.fbo_stack) == 0 or self.fbo_stack[-1].id != fbo.id:
-            # TODO: Implement custom exception
-            raise RuntimeError("Fbo stack was corrupted")
+        # TODO: Implement custom exception
+        if len(self.fbo_stack) == 0:
+            raise RuntimeError("Tried to pop from empty FBO stack")
+        if self.fbo_stack[-1].id != fbo.id:
+            msg = f"FBO stack was corrupted. Tried to pop {fbo.id} but top of stack is {self.fbo_stack[-1].id}"
+            raise RuntimeError(msg)
         
         self.fbo_stack.pop()
 

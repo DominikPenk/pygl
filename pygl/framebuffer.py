@@ -1,4 +1,5 @@
 import logging
+from tkinter import Frame
 
 import numpy as np
 import OpenGL.GL as gl
@@ -12,28 +13,51 @@ class FrameBuffer(GLObject):
         super(FrameBuffer, self).__init__(gl.glGenFramebuffers, gl.glDeleteFramebuffers)
 
         self.attachments = {}
-        self.__color_buffers = []
+        self.__color_buffers = set()
         self.__size = shape
-        self.__rbo = 0
+        self.__default_depth_rbo = 0
         self._are_draw_buffers_attached = True
         self._is_read_buffer_attached = True
 
         self.__default_readbuffer = gl.GLenum(gl.glGetIntegerv(gl.GL_READ_BUFFER))
+        
+    def _check_status(self):
+        status = gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER)
+        if status == gl.GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+            raise RuntimeError("Framebuffer incomplete: Attachment is NOT complete.")
+        elif status == gl.GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+            raise RuntimeError("Framebuffer incomplete: No image is attached to FBO.")
+        elif status == gl.GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+            raise RuntimeError("Framebuffer incomplete: Draw buffer is NOT complete.")
+        elif status == gl.GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+            raise RuntimeError("Framebuffer incomplete: Read buffer is NOT complete.")
+        elif status == gl.GL_FRAMEBUFFER_UNSUPPORTED:
+            raise RuntimeError("Unsupported by FBO implementation.")
+        elif status == gl.GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+            raise RuntimeError("Framebuffer incomplete: Multisample settings invalid.")
+        elif status == gl.GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+            raise RuntimeError("Framebuffer incomplete: Layer and renderbuffer attachment mismatch.")
+
 
     def _attach_buffers(self):
-        if not self.has_depth_texture and self.__rbo == 0:
-            self.__rbo = gl.glGenRenderbuffers(1)
-            gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.__rbo)
+        # Do we need to attach a default renderbuffer (since no attachments were specified)?
+        if not self.has_depth_texture and self.__default_depth_rbo == 0:
+            self.__default_depth_rbo = gl.glGenRenderbuffers(1)
+            gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.__default_depth_rbo)
             gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_DEPTH_COMPONENT24, self.width, self.height)
-            gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT, gl.GL_RENDERBUFFER, self.__rbo)
+            gl.glFramebufferRenderbuffer(gl.GL_FRAMEBUFFER, gl.GL_DEPTH_ATTACHMENT, 
+                                         gl.GL_RENDERBUFFER, self.__default_depth_rbo)
+            gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, 0)
+
         if self.__color_buffers:
-            gl.glDrawBuffers(len(self.__color_buffers), self.__color_buffers)
+            color_buffers = list(self.__color_buffers)
+            gl.glDrawBuffers(len(self.__color_buffers), color_buffers)
         self._are_draw_buffers_attached = True
 
     def free(self):
         super().free()
-        if self.__rbo != 0:
-            gl.glDeleteRenderbuffers(1, np.array(self.__rbo))
+        if self.__default_depth_rbo != 0:
+            gl.glDeleteRenderbuffers(1, np.array(self.__default_depth_rbo))
         
     def attach_texture(self, slot, texture = None, mip_level=0, **kwargs):
         if not (gl.GL_COLOR_ATTACHMENT0 <= slot <= gl.GL_COLOR_ATTACHMENT0 + gl.GL_MAX_COLOR_ATTACHMENTS):
@@ -69,18 +93,32 @@ class FrameBuffer(GLObject):
             pass
             # print(f"Using texture: {texture.__class__.__name__}.{texture.id} [ttype: {texture.ttype.name}]")
         self.attachments[slot] = texture
-        if slot not in [gl.GL_DEPTH_ATTACHMENT, gl.GL_DEPTH_STENCIL_ATTACHMENT] and slot not in self.__color_buffers:
-            self.__color_buffers.append(slot)
-        self.bind()
-        gl.glFramebufferTexture(
-            gl.GL_FRAMEBUFFER, 
-            slot, 
-            texture.id, 
-            mip_level)      
-        self._attach_buffers()
-        if gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) != gl.GL_FRAMEBUFFER_COMPLETE:
-            raise RuntimeError("Failed to create FBO")
-        self.unbind()
+        if slot not in [gl.GL_DEPTH_ATTACHMENT, gl.GL_DEPTH_STENCIL_ATTACHMENT]:
+            self.__color_buffers.add(slot)
+        else:
+            # Check if we we had a default depth renderbuffer and delete it
+            if self.__default_depth_rbo != 0:
+                gl.glDeleteRenderbuffers(1, np.array(self.__default_depth_rbo))
+                self.__default_depth_rbo = 0
+
+        texture_target = kwargs.get('texture_target', texture._type)
+        
+        # TODO: This is ugly we should probably only use glFramebufferTexture2D if 
+        # The target is a cube map side
+        with self:
+            if texture_target == gl.GL_TEXTURE_CUBE_MAP:
+                gl.glFramebufferTexture(gl.GL_FRAMEBUFFER, slot, texture.id, mip_level)
+            else:
+                texture.bind()
+                gl.glFramebufferTexture2D(
+                    gl.GL_FRAMEBUFFER, 
+                    slot, 
+                    texture_target,
+                    texture.id, 
+                    mip_level)
+                texture.unbind()      
+            self._attach_buffers()
+            self._check_status()
         return texture
         
     def detach_draw_buffer(self):
@@ -117,11 +155,12 @@ class FrameBuffer(GLObject):
             self.__size = shape
             for _, tex in self.attachments.items():
                 tex.resize(self.width, self.height)
+            # Resize the default color and depth buffers
+            if self.__default_depth_rbo != 0:
+                gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.__default_depth_rbo)
+                gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_DEPTH_COMPONENT24, self.width, self.height)
+            gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, 0)
             
-            if self.__rbo != 0:
-                gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, self.__rbo)
-                gl.glRenderbufferStorage(gl.GL_RENDERBUFFER, gl.GL_DEPTH24_STENCIL8, self.width, self.height)
-                gl.glBindRenderbuffer(gl.GL_RENDERBUFFER, 0)            
 
     def bind(self):
         should_be_bound = Context.current().try_push_fbo(self)
@@ -175,6 +214,6 @@ class FrameBuffer(GLObject):
         return self._are_draw_buffers_attached
 
     @property
-    def is_valid(self):
+    def is_complete(self):
         with self:
             return gl.glCheckFramebufferStatus(gl.GL_FRAMEBUFFER) == gl.GL_FRAMEBUFFER_COMPLETE
