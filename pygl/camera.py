@@ -41,11 +41,13 @@ class Camera(object):
 
     def look_at(self, target, eye=None, up=[0, 1, 0]):
         def compute_lookat(pts):
-            cog = np.mean(pts)
-            r   = np.linalg.norm(pts - cog, axis=-1).max()
+            pt_min = np.min(pts, axis=0)
+            pt_max = np.max(pts, axis=0)
+            center = (pt_min + pt_max) * 0.5
+            r   = np.linalg.norm(pts - center, axis=-1).max()
             d   = r / np.tan(0.5 * math.radians(self.fov))
-            eye = cog + np.array([0, d*0.707, d*0.707])
-            self.__T_view = transform.look_at(eye, cog, up)
+            eye = center + np.array([0, d*0.707, d*0.707])
+            self.__T_view = transform.look_at(eye, center, up)
 
         if isinstance(target, Mesh):
             compute_lookat(target.vertices)
