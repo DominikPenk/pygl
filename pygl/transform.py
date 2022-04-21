@@ -101,4 +101,4 @@ def look_at(eye, center, up=[0, 1, 0]):
     M[0, 3] = -np.dot(s, eye)
     M[1, 3] = -np.dot(u, eye)
     M[2, 3] =  np.dot(f, eye)
-    return M
+    return M.astype(np.float32)

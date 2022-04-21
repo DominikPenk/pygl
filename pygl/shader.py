@@ -199,12 +199,35 @@ class Shader(GLObject):
 
     def set_matrix(self, name, value):
         assert isinstance(value, np.ndarray), 'Matrix must be a numpy array'
-        if value.shape == (4, 4):
-            gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
+        assert value.ndim == 2, 'Matrix must be a 2D array'
+        if value.shape == (2, 2):
+            gl.glUniformMatrix2fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
         elif value.shape == (3, 3):
             gl.glUniformMatrix3fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
+        elif value.shape == (4, 4):
+            gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
         else:
             raise RuntimeError(f"Matrix shape {value.shape} not supported")
+
+    def set_matrices(self, name, matrices):
+        assert isinstance(matrices, np.ndarray), 'Matrices must be a numpy array'
+        assert matrices.ndim == 3, 'Matrices must be a 3D array'
+
+        matrix_shape = matrices.shape[1:]
+        n = matrices.shape[0]
+
+
+        if matrix_shape == (2, 2):
+            bind_fn = gl.glUniformMatrix2fv
+        elif matrix_shape == (3, 3):
+            bind_fn = gl.glUniformMatrix3fv
+        elif matrix_shape == (4, 4):
+            bind_fn = gl.glUniformMatrix4fv
+        else:
+            raise RuntimeError(f"Matrix shape {matrices.shape} not supported")
+
+        for i, matrix in enumerate(matrices):
+            bind_fn(gl.glGetUniformLocation(self.id, f"{name}[{i}]"), 1, gl.GL_TRUE, matrix)
 
     def set_sampler(self, name, texture, slot):
         texture.bind(slot)
@@ -229,14 +252,14 @@ class Shader(GLObject):
                     if value.dtype != np.float32:
                         print(f"Set uniform {name}: Unsupported format {value.dtype}. Going to convert")
                         value = value.astype(np.float32)
-                    if value.shape == (2, 2):
-                        gl.glUniformMatrix2fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
-                    elif value.shape == (3, 3):
-                        gl.glUniformMatrix3fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
-                    elif value.shape == (4, 4):
-                        gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.id, name), 1, gl.GL_TRUE, value)
-                    else:
+                    if value.ndim == 1:
                         self.set_vector(name, value)
+                    elif value.ndim == 2:
+                        self.set_matrix(name, value)
+                    elif value.ndim == 3:
+                        self.set_matrices(name, value)
+                    else:
+                        raise RuntimeError(f"Unsupported array shape {value.shape}")
                 elif isinstance(value, TextureBase):
                     uniform_type = self._uniform_types.get(name, None)
                     if uniform_type in [gl.GL_SAMPLER_2D, gl.GL_SAMPLER_CUBE, None]:

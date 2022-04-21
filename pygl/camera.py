@@ -60,7 +60,7 @@ class Camera(object):
 
     @property
     def position(self):
-        return self.__T_view[:, 3]
+        return -self.__T_view[:3, :3].T.dot(self.__T_view[:3, 3])
 
     @property
     def aspect_ratio(self):
@@ -86,6 +86,13 @@ class Camera(object):
     @V.setter
     def V(self, T):
         self.__T_view = T
+
+    @property
+    def M(self):
+        M = np.eye(4, dtype=np.float32)
+        M[:3, :3] = self.V[:3, :3].T
+        M[:3, 3] = -np.dot(self.V[:3, :3].T, self.V[:3, 3])
+        return M
 
     @property
     def screen_size(self):
