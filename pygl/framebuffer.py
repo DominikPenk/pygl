@@ -121,7 +121,7 @@ class FrameBuffer(GLObject):
             self._check_status()
         return texture
         
-    def detach_draw_buffer(self):
+    def detach_draw_buffers(self):
         if not self._are_draw_buffers_attached:
             logging.warning("Draw buffer is already detached")
 
