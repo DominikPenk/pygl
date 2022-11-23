@@ -1,0 +1,55 @@
+#version 430
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout (binding = 0) uniform sampler2D real_depth;
+layout (rgba32f, binding = 1) uniform image2D normal;
+
+uniform vec4 intrinsics;
+uniform float depth_jump_threshold;
+
+vec3 unproject(int x, int y, float d) {
+    return d * vec3(
+           (x + 0.5 - intrinsics.z) / intrinsics.x,
+          -(y + 0.5 - intrinsics.w) / intrinsics.y,
+          -1.0);
+}
+
+vec3 compute_normal(int x, int y, float threshold) {
+    ivec2 size = textureSize(real_depth, 0);
+    float d01 = texelFetch(real_depth, ivec2(x, (y + 1)), 0).r;
+    float d02 = texelFetch(real_depth, ivec2(x, (y - 1)), 0).r;
+    float d10 = texelFetch(real_depth, ivec2(x + 1, y  ), 0).r;
+    float d20 = texelFetch(real_depth, ivec2(x - 1, y  ), 0).r;
+    
+    float dz = max(abs(d01 - d02), abs(d10 - d20));
+    
+    vec3 PC = unproject(x, y + 1, d01);
+    vec3 CP = unproject(x + 1, y, d10);
+    vec3 MC = unproject(x, y - 1, d02);
+    vec3 CM = unproject(x - 1, y, d20);
+
+    vec3 n = cross(PC - MC, CP - CM);
+    float l = length(n);
+    
+
+    if (x > 0 && x < size.x - 1 && y > 0 && y < size.y - 1 &&
+        d01 > 0 && d02 > 0 && d10 > 0 && d20 > 0 &&
+        dz < threshold &&
+        l > 0.f) 
+    {
+        return n / l;
+    }
+    else
+    {
+        return vec3(0); 
+    }
+}
+
+void main() {
+    ivec2 imageSize = textureSize(real_depth, 0);
+    int x = int(gl_GlobalInvocationID.x);
+    int y = imageSize.y - int(gl_GlobalInvocationID.y);
+    vec3 n = compute_normal(x, y, depth_jump_threshold);
+    imageStore(normal, ivec2(x, y), vec4(1, 0, 0, 0));
+}

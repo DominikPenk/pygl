@@ -7,6 +7,7 @@ from .glstate import BlendEquation, BlendFactor, CompareFunc, CullingMode
 from .mesh import Mesh
 from .shader import Shader
 from .texture import Texture2D, tformat, ttype
+from .framebuffer import FrameBuffer
 
 # Try to import egl
 try:

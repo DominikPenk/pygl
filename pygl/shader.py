@@ -266,6 +266,7 @@ class Shader(GLObject):
                         value.bind(next_texture_slot)
                         gl.glUniform1i(gl.glGetUniformLocation(self.id, name), next_texture_slot)
                     else:
+                        print("Binding image texture")
                         gl.glBindImageTexture(next_texture_slot, value.id, 0, False, 0, gl.GL_WRITE_ONLY, value.sized_format)
                     next_texture_slot += 1  
                 elif isinstance(value, ShaderStorageBuffer):
